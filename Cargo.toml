@@ -12,7 +12,7 @@ tokio = { version = "1.39.2", features = ["full"] }
 
 [dependencies.songbird]
 version = "0.4.3"
-features = ["builtin-queue"]
+features = ["builtin-queue", "receive"]
 
 # To get additional codecs, you *must* add Symphonia yourself.
 # This includes the default formats (MKV/WebM, Ogg, Wave) and codecs (FLAC, PCM, Vorbis)...

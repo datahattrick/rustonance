@@ -11,6 +11,10 @@ use crate::commands::{
     music::play,
 };
 use crate::utils;
+use songbird::{
+    driver::DecodeMode,
+    Config,
+};
 
 async fn on_error(error: poise::FrameworkError<'_, utils::Data, utils::Error>) {
     // This is our custom error handler
@@ -89,10 +93,11 @@ impl Client {
             .options(options)
          .build();
 
+        let songbird_config = Config::default().decode_mode(DecodeMode::Decode);
 
         let client = serenity::Client::builder(&token, intents)
             .framework(framework)
-            .register_songbird()
+            .register_songbird_from_config(songbird_config)
             .await?;
 
         Ok(Client { client })

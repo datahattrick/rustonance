@@ -2,10 +2,10 @@ use poise::serenity_prelude as serenity;
 use crate::utils::{Data, Error};
 
 pub async fn event_handler(
-    ctx: &serenity::Context,
+    _ctx: &serenity::Context,
     event: &serenity::FullEvent,
-    framework: poise::FrameworkContext<'_, Data, Error>,
-    data: &Data,
+    _framework: poise::FrameworkContext<'_, Data, Error>,
+    _data: &Data,
 ) -> Result<(), Error> {
     match *event {
         serenity::FullEvent::Ready { ref data_about_bot, .. } => {
