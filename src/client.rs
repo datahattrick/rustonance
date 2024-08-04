@@ -5,6 +5,7 @@ use std::time::Duration;
 use poise::serenity_prelude as serenity;
 use songbird::SerenityInit;
 
+use crate::handlers::serenity::event_handler;
 use crate::commands::{
     help::help,
     music::play,
@@ -39,7 +40,6 @@ impl Client {
     }
 
     pub async fn new(token: String) -> Result<Client, Box<dyn std::error::Error>> {
-
         let intents = serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::MESSAGE_CONTENT;
 
         let options = poise::FrameworkOptions {
@@ -104,19 +104,3 @@ impl Client {
             .await
     }
 }
-
-async fn event_handler(
-    _ctx: &serenity::Context,
-    event: &serenity::FullEvent,
-    _framework: poise::FrameworkContext<'_, utils::Data, utils::Error>,
-    _data: &utils::Data,
-) -> Result<(), utils::Error> {
-    match event {
-        serenity::FullEvent::Ready { data_about_bot, .. } => {
-            println!("Logged in as {}", data_about_bot.user.name);
-        }
-        _ => {}
-    }
-    Ok(())
-}
-
