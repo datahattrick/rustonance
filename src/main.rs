@@ -1,6 +1,7 @@
 
-use rustonance::client::Client;
 use std::error::Error;
+use rustonance::client::Client;
+pub mod error;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {

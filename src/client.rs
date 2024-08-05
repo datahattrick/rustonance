@@ -1,22 +1,20 @@
 use std::env;
 use std::sync::Arc;
-use std::time::Duration;
 
 use poise::serenity_prelude as serenity;
-use songbird::SerenityInit;
 
+use crate::error::RustonanceError;
 use crate::handlers::serenity::event_handler;
 use crate::commands::{
     help::help,
-    music::play,
+    music::{play, join},
 };
-use crate::utils;
-use songbird::{
-    driver::DecodeMode,
-    Config,
-};
+use crate::utils::{UserData, Error};
 
-async fn on_error(error: poise::FrameworkError<'_, utils::Data, utils::Error>) {
+// YtDl requests need an HTTP client to operate -- we'll create and store our own.
+use reqwest::Client as HttpClient;
+
+async fn on_error(error: poise::FrameworkError<'_, UserData, Error>) {
     // This is our custom error handler
     // They are many errors that can occur, so we only handle the ones we want to customize
     // and forward the rest to the default handler
@@ -38,25 +36,20 @@ pub struct Client {
 }
 
 impl Client {
-    pub async fn default() -> Result<Client, Box<dyn std::error::Error>> {
-        let token = env::var("DISCORD_TOKEN").expect("Fatality! DISCORD_TOKEN not set!");
+    pub async fn default() -> Result<Client, RustonanceError> {
+        let token = env::var("DISCORD_TOKEN").expect("DISCORD_TOKEN not set!");
         Client::new(token).await
     }
 
-    pub async fn new(token: String) -> Result<Client, Box<dyn std::error::Error>> {
+    pub async fn new(token: String) -> Result<Client, RustonanceError> {
         let intents = serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::MESSAGE_CONTENT;
 
         let options = poise::FrameworkOptions {
             // List of commands
-            commands: vec![help(), play()],
+            commands: vec![help(), play(), join()],
             // What prefix to look for
             prefix_options: poise::PrefixFrameworkOptions { 
                 prefix: Some("/".into()), 
-                edit_tracker: Some(Arc::new(poise::EditTracker::for_timespan(Duration::from_secs(3600)))),
-                additional_prefixes: vec![
-                    poise::Prefix::Literal("hey bot"),
-                    poise::Prefix::Literal("hey bot,"),
-                ],
                 ..Default::default()
             },
 
@@ -82,23 +75,26 @@ impl Client {
             ..Default::default()
         };
 
+        let manager = songbird::Songbird::serenity();
+        let manager_clone = Arc::clone(&manager);
 
         let framework = poise::Framework::builder()
             .setup(move |_ctx, _ready, _framework| {
                 Box::pin(async move {
-                    let http_client = reqwest::Client::new();
-                    Ok(utils::Data { http_client })
+                    Ok( UserData { 
+                        http_client: HttpClient::new(),
+                        songbird: manager_clone,
+                     })
                 })
             })
             .options(options)
          .build();
 
-        let songbird_config = Config::default().decode_mode(DecodeMode::Decode);
-
         let client = serenity::Client::builder(&token, intents)
+            .voice_manager_arc(manager)
             .framework(framework)
-            .register_songbird_from_config(songbird_config)
-            .await?;
+            .await
+            .expect("Err creating client");
 
         Ok(Client { client })
     }

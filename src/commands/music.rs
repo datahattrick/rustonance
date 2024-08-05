@@ -1,4 +1,4 @@
-use songbird::{id::ChannelId, input::YoutubeDl};
+use songbird::input::YoutubeDl;
 use crate::utils::{Context, Error};
 use poise::serenity_prelude as serenity;
 
@@ -6,14 +6,22 @@ use poise::serenity_prelude as serenity;
 use songbird::events::{Event, EventContext, EventHandler as VoiceEventHandler, TrackEvent};
 use serenity::async_trait;
 
-async fn join(ctx: Context<'_> ) -> Result<(), Error> {
+//use crate::sources::spotify;
+
+type CommandResult = Result<(), Error>;
+
+#[derive(Clone)]
+pub enum QueryType {
+    Keywords(String),
+    KeywordList(Vec<String>),
+    VideoLink(String),
+    PlaylistLink(String),
+}
+
+#[poise::command(prefix_command, guild_only)]
+pub async fn join(ctx: Context<'_>) -> CommandResult {
     let (guild_id, channel_id) = {
-        let guild = match ctx.guild() {
-            Some(guild) => guild,
-            None => {
-                return Ok(());
-            }
-        };
+        let guild = ctx.guild().unwrap();
         let channel_id = guild
             .voice_states
             .get(&ctx.author().id)
@@ -25,90 +33,45 @@ async fn join(ctx: Context<'_> ) -> Result<(), Error> {
     let connect_to = match channel_id {
         Some(channel) => channel,
         None => {
-            ctx.say("Not in a voice channel").await?;
-
+            check_msg(ctx.reply("Not in a voice channel").await);
             return Ok(());
         },
     };
 
-    let manager = songbird::get(ctx.serenity_context()).await.unwrap();
-
-    if let Some(call) = manager.get(guild_id) {
-        let handler = call.lock().await;
-        let in_current_call = handler.current_connection().is_some();
-
-        if in_current_call {
-            ctx.say("On my way Boss!").await?;
-            let _bot_channel_id: ChannelId = handler.current_channel().unwrap().0.into();
-        }
+    let manager = &ctx.data().songbird;
+    if let Ok(handler_lock) = manager.join(guild_id, connect_to).await {
+        // Attach an event handler to see notifications of all track errors.
+        let mut handler = handler_lock.lock().await;
+        handler.add_global_event(TrackEvent::Error.into(), TrackErrorNotifier);
     }
 
-    match manager.join(guild_id, connect_to).await {
-        Ok(handler_lock) => {
-            let mut handler = handler_lock.lock().await;
-            handler.add_global_event(TrackEvent::Error.into(), TrackErrorNotifier);
-        },
-        Err(e) => {
-            ctx.say(format!("Failed to join the channel: {}", e)).await?;
-        }
-    }
     Ok(())
 }
 
-#[poise::command(prefix_command, track_edits, slash_command)]
-pub async fn play(
-    ctx: Context<'_>,
-    #[description = "Play a Song"] args: String
-) -> Result<(), Error> {
-    // Check if the input is a URL or a search term
-    let do_search = !args.starts_with("http");
+#[poise::command(prefix_command, guild_only)]
+pub async fn play(ctx: Context<'_>, url: String) -> CommandResult {
+    let do_search = !url.starts_with("http");
 
-    // Retrieve the HTTP client from the context
-    let http_client = ctx.data().http_client();
+    let guild_id = ctx.guild_id().unwrap();
+    let data = ctx.data();
 
-     // Ensure the command is being used in a guild
-     let guild_id = match ctx.guild_id() {
-        Some(id) => id,
-        None => {
-            ctx.say("This command can only be used in a server.").await?;
-            return Ok(());
-        }
-    };
-
-    // Retrieve the Songbird manager
-    let manager = songbird::get(ctx.serenity_context())
-        .await
-        .expect("Songbird Voice client placed in initialisation.")
-        .clone();
-
-    // Ensure the user is in a voice channel and join it
-    if let Err(err) = join(ctx).await {
-        ctx.say(format!("Failed to join voice channel: {}", err)).await?;
-        return Ok(());
-    }
-
-    // Retrieve the voice handler for the guild
-    if let Some(handler_lock) = manager.get(guild_id) {
+    if let Some(handler_lock) = data.songbird.get(guild_id) {
         let mut handler = handler_lock.lock().await;
 
-        // Determine the source based on whether it's a search or a URL
         let src = if do_search {
-            YoutubeDl::new_search(http_client, args)
+            YoutubeDl::new_search(data.http_client.clone(), url)
         } else {
-            YoutubeDl::new(http_client, args)
+            YoutubeDl::new(data.http_client.clone(), url)
         };
+        let _ = handler.play_input(src.into());
 
-        // Inform the user that the bot is playing the input
-        ctx.say("Playing").await?;
-        handler.play_input(src.clone().into());
+        check_msg(ctx.say("Playing song").await);
     } else {
-        ctx.say("You need to be in a Voice Channel to use this command.").await?;
+        check_msg(ctx.say("Not in a voice channel to play in").await);
     }
-    
+
     Ok(())
-
 }
-
 
 struct TrackErrorNotifier;
 
@@ -124,7 +87,13 @@ impl VoiceEventHandler for TrackErrorNotifier {
                 );
             }
         }
-
         None
+    }
+}
+
+/// Checks that a message successfully sent; if not, then logs why to stdout.
+fn check_msg<T>(result: serenity::Result<T>) {
+    if let Err(why) = result {
+        println!("Error sending message: {:?}", why);
     }
 }
