@@ -9,6 +9,7 @@ pub enum RustonanceError {
     NotInRange(&'static str, isize, isize, isize),
     Serenity(SerenityError),
     Spotify(SpotifyRSClientError),
+    Songbird(Box<dyn std::error::Error + Send + Sync + 'static>),
     IO(std::io::Error),
 }
 
@@ -23,7 +24,8 @@ impl Display for RustonanceError {
             )),
             Self::Serenity(err) => f.write_str(&format!("{err}")),
             Self::Spotify(err) => f.write_str(&format!("{err}")),
-            Self::IO(err) => f.write_str(&format!("{err}"))
+            Self::IO(err) => f.write_str(&format!("{err}")),
+            Self::Songbird(err) => f.write_str(&format!("{err}"))
         }
     }
 }
@@ -31,6 +33,12 @@ impl Display for RustonanceError {
 impl From<std::io::Error> for RustonanceError {
     fn from(err: std::io::Error) -> Self {
         Self::IO(err)
+    }
+}
+
+impl From<Box<(dyn std::error::Error + std::marker::Send + Sync + 'static)>> for RustonanceError {
+    fn from(err: Box<(dyn std::error::Error + std::marker::Send + Sync + 'static)>) -> Self {
+        Self::Songbird(err)
     }
 }
 

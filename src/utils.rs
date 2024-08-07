@@ -22,3 +22,4 @@ impl UserData {
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 #[allow(unused)]
 pub type Context<'a> = poise::Context<'a, UserData, Error>;
+

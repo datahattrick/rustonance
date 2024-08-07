@@ -7,7 +7,8 @@ use crate::error::RustonanceError;
 use crate::handlers::serenity::event_handler;
 use crate::commands::{
     help::help,
-    music::{play, join},
+    play::play,
+    join::join,
 };
 use crate::utils::{UserData, Error};
 

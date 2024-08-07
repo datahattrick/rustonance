@@ -1,2 +1,3 @@
 pub mod help;
-pub mod music;
+pub mod play;
+pub mod join;
