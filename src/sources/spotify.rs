@@ -1,15 +1,20 @@
 use std::str::FromStr;
 use std::env;
-use spotify_rs::{auth::{NoVerifier, Token}, client::Client, model::track::Track, AuthCodeClient, AuthCodeFlow, RedirectUrl};
+use rspotify::{
+    clients::BaseClient,
+    model::{AlbumId, PlayableItem, PlaylistId, SimplifiedArtist, TrackId},
+    ClientCredsSpotify, Credentials, ClientError
+};
 use tokio::sync::Mutex;
 use regex::Regex;
-use crate::error::RustonanceError;
-use crate::commands::music::QueryType;
+use tracing::{error, info};
+use crate::commands::play::QueryType;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref SPOTIFY: Mutex<Result<Client<Token, AuthCodeFlow, NoVerifier>, RustonanceError>> =
-        Mutex::new(Err(RustonanceError::Other("no auth attempts")));
+    pub static ref SPOTIFY: Mutex<Result<ClientCredsSpotify, ClientError>> =
+        Mutex::new(Err(ClientError::InvalidToken));
+
     pub static ref SPOTIFY_QUERY_REGEX: Regex =
         Regex::new(r"spotify.com/(?P<media_type>.+)/(?P<media_id>.*?)(?:\?|$)").unwrap();
 }
@@ -38,43 +43,40 @@ impl FromStr for MediaType {
 pub struct Spotify {}
 
 impl Spotify {
-    pub async fn auth() -> Result<Client<Token, AuthCodeFlow, NoVerifier>, RustonanceError> {
+    pub async fn auth() -> Result<ClientCredsSpotify, ClientError> {
         let spotify_client_id = env::var("SPOTIFY_CLIENT_ID")
-            .map_err(|_| RustonanceError::Other("Missing spotify client ID"))?;
+            .map_err(|_| error!("Missing Spotify Client ID")).unwrap();
 
         let spotify_client_secret = env::var("SPOTIFY_CLIENT_SECRET")
-            .map_err(|_| RustonanceError::Other("Missing spotify client secret"))?;
+            .map_err(|_| error!("Missing Spotify Client Secret")).unwrap();
 
-        let redirect_url = RedirectUrl::new("redirect_url".to_owned())?;
-        let scopes = vec!["user-library-read", "playlist-read-private"];
-        let auth_code_flow = AuthCodeFlow::new(spotify_client_id, spotify_client_secret, scopes);
+        let creds = Credentials::new(&spotify_client_id, &spotify_client_secret);
 
-        let (client, url) = AuthCodeClient::new(auth_code_flow, redirect_url, true);
-
-        let spotify = client.authenticate("auth_code", "csrf_token").await?;
-
+        let spotify = ClientCredsSpotify::new(creds);
+        spotify.request_token().await?;
+    
         Ok(spotify)
     }
 
-    pub async fn spotify_type(
-        spotify: &Client<Token, AuthCodeFlow, NoVerifier>,
+    pub async fn spotify_search_type(
+        spotify: ClientCredsSpotify,
         query: &str,
-    ) -> Result<QueryType, RustonanceError> {
+    ) -> QueryType {
         let captures = SPOTIFY_QUERY_REGEX
             .captures(query)
-            .ok_or(RustonanceError::Other("Spotify invalid query"))?;
+            .ok_or(info!("Spotify invalid query")).unwrap();
 
         let media_type = captures
             .name("media_type")
-            .ok_or(RustonanceError::Other("Spotify invalid query"))?
+            .ok_or(info!("Spotify invalid query")).unwrap()
             .as_str();
 
         let media_type = MediaType::from_str(media_type)
-            .map_err(|_| RustonanceError::Other("Spotify invalid query"))?;
+            .map_err(|_| info!("Spotify invalid query")).unwrap();
 
         let media_id = captures
             .name("media_id")
-            .ok_or(RustonanceError::Other("Spotify invalid query"))?
+            .ok_or(info!("Spotify invalid query")).unwrap()
             .as_str();
 
         match media_type {
@@ -85,30 +87,74 @@ impl Spotify {
     }
 
     pub async fn get_track(
-        spotify: &Client<Token, AuthCodeFlow, NoVerifier>,
+        spotify: ClientCredsSpotify,
         media_id: &str,
-    ) -> Result<Track, RustonanceError> {
-        let track = spotify.track(media_id).get().await?;
-        Ok(track)
+    ) -> QueryType {
+        info!("Getting Spotify Track {media_id}");
+        let track_id = TrackId::from_id(media_id)
+            .map_err(|err| error!("Track ID contains invalid characters: {err}")).unwrap();
+
+        let track = spotify.track(track_id, None)
+            .await
+            .map_err(|err| info!("Track ID contains invalid characters: {:?}", err)).unwrap();
+
+        let artist = Self::join_artists(track.artists);
+
+        let res = Self::build_query(&artist, &track.name.clone());
+
+        QueryType::Keywords(res)
     }
 
-
+    // TODO: Get Album information
     pub async fn get_album(
-        spotify: &Client<Token, AuthCodeFlow, NoVerifier>,
+        spotify: ClientCredsSpotify,
         media_id: &str,
-    ) -> Result<Track, RustonanceError> {
-        let track = spotify.track(media_id).get().await?;
-        Ok(track)
+    ) -> QueryType {
+        info!("Getting Spotify Track {media_id}");
+        let track_id = TrackId::from_id(media_id)
+            .map_err(|err| error!("Track ID contains invalid characters: {err}")).unwrap();
+
+        let track = spotify.track(track_id, None)
+            .await
+            .map_err(|err| info!("Track ID contains invalid characters: {:?}", err)).unwrap();
+
+        let artist = Self::join_artists(track.artists);
+
+        let res = Self::build_query(&artist, &track.name.clone());
+
+        QueryType::Keywords(res)
     }
 
-
+    // TODO: Get Playlist information
     pub async fn get_playlist(
-        spotify: &Client<Token, AuthCodeFlow, NoVerifier>,
+        spotify: ClientCredsSpotify,
         media_id: &str,
-    ) -> Result<Track, RustonanceError> {
-        let track = spotify.track(media_id).get().await?;
-        Ok(track)
+    ) -> QueryType {
+        info!("Getting Spotify Track {media_id}");
+        let track_id = TrackId::from_id(media_id)
+            .map_err(|err| error!("Track ID contains invalid characters: {err}")).unwrap();
+
+        let track = spotify.track(track_id, None)
+            .await
+            .map_err(|err| info!("Track ID contains invalid characters: {:?}", err)).unwrap();
+
+        let artist = Self::join_artists(track.artists);
+
+        let res = Self::build_query(&artist, &track.name.clone());
+
+        QueryType::Keywords(res)
+    }
+
+    fn build_query(artists: &str, track_name: &str) -> String {
+        format!("{} - {}", artists, track_name)
+    }
+
+    fn join_artists(artists: Vec<SimplifiedArtist>) -> String {
+        let artists_names: Vec<String> = artists.iter().map(
+            |artist| artist.name.clone()
+        )
+        .collect();
+        artists_names.join(" ")
     }
 
 }
-

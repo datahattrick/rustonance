@@ -3,7 +3,6 @@ use std::sync::Arc;
 
 use poise::serenity_prelude as serenity;
 
-use crate::error::RustonanceError;
 use crate::handlers::serenity::event_handler;
 use crate::commands::{
     help::help,
@@ -37,12 +36,12 @@ pub struct Client {
 }
 
 impl Client {
-    pub async fn default() -> Result<Client, RustonanceError> {
+    pub async fn default() -> Result<Client, Error> {
         let token = env::var("DISCORD_TOKEN").expect("DISCORD_TOKEN not set!");
         Client::new(token).await
     }
 
-    pub async fn new(token: String) -> Result<Client, RustonanceError> {
+    pub async fn new(token: String) -> Result<Client, Error> {
         let intents = serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::MESSAGE_CONTENT;
 
         let options = poise::FrameworkOptions {

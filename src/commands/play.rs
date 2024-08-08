@@ -1,4 +1,7 @@
+use reqwest::Url;
 use songbird::input::YoutubeDl;
+use tracing::error;
+use crate::sources::spotify::{Spotify,SPOTIFY};
 use crate::utils::{Context, Error};
 use poise::serenity_prelude as serenity;
 
@@ -7,6 +10,7 @@ use poise::serenity_prelude as serenity;
 use serenity::async_trait;
 
 use crate::messaging::message::check_msg;
+use crate::commands::join::join;
 //use crate::sources::spotify;
 
 type CommandResult = Result<(), Error>;
@@ -19,31 +23,29 @@ pub enum QueryType {
     PlaylistLink(String),
 }
 
-
-
 #[poise::command(prefix_command, guild_only)]
-pub async fn play(ctx: Context<'_>, url: String) -> CommandResult {
-    let do_search = !url.starts_with("http");
-
+pub async fn play(ctx: Context<'_>, url: &str) -> CommandResult {
     let guild_id = ctx.guild_id().unwrap();
     let data = ctx.data();
 
-    if let Some(handler_lock) = data.songbird.get(guild_id) {
-        let mut handler = handler_lock.lock().await;
+    // Join Voice channel if not in one yet
+    join();
 
-        let src = if do_search {
-            YoutubeDl::new_search(data.http_client.clone(), url)
-        } else {
-            YoutubeDl::new(data.http_client.clone(), url)
-        };
-        let _ = handler.play_input(src.into());
+    let call =  data.songbird.get(guild_id).unwrap();
 
-        check_msg(ctx.say("Playing song").await);
-
-        handler.remove_all_global_events()
-    } else {
-        check_msg(ctx.say("Not in a voice channel to play in").await);
-    }
+    // What are we playing???
+    let query_type = match Url::parse(url) {
+        Ok(url_data) => match url_data.host_str() {
+            Some("open.spotify.com") => {
+                let spotify = SPOTIFY.lock().await;
+                Some(Spotify::spotify_search_type(spotify.as_ref().unwrap().clone(), url))
+            },
+            Some(other) => None,
+            None => None,
+        }
+        Err(_) => None
+    };
+    let handler = call.lock().await;
 
     Ok(())
 }
