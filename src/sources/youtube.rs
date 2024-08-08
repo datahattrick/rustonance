@@ -1,5 +1,5 @@
 use crate::{model::TrackInfo, utils::Context};
-use songbird::input::{AuxMetadata, Compose, YoutubeDl};
+use songbird::input::{Compose, YoutubeDl};
 use tracing::error;
 
 pub struct YouTube {}

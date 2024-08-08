@@ -2,7 +2,7 @@ use std::str::FromStr;
 use std::env;
 use rspotify::{
     clients::BaseClient,
-    model::{AlbumId, PlayableItem, PlaylistId, SimplifiedArtist, TrackId},
+    model::{SimplifiedArtist, TrackId},
     ClientCredsSpotify, Credentials, ClientError
 };
 use tokio::sync::Mutex;

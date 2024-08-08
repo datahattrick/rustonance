@@ -1,9 +1,7 @@
 
-use songbird::{Call, Driver};
+use songbird::tracks::TrackQueue;
+use songbird::Driver;
 use songbird::input::{Input, YoutubeDl};
-use songbird::tracks::{TrackHandle, TrackQueue};
-use tokio::sync::MutexGuard;
-use tracing::info;
 use crate::sources::youtube::YouTube;
 use crate::utils::{Error,Context};
 
@@ -24,12 +22,12 @@ pub enum QueryType {
 pub async fn play(ctx: Context<'_>, url: String) ->  Result<(), Error> {
     let guild_id = ctx.guild_id().unwrap();
     let _data = ctx.data();
-    let driver = ctx.data().driver.clone();
+    let _driver = ctx.data().driver.clone();
 
     join_channel(ctx).await?;
 
     let mut queues = ctx.data().queues.clone();
-    let queue = queues.entry(guild_id.into()).or_default();
+    let _queue = queues.entry(guild_id.into()).or_default();
 
     if let Some(handler_lock) = ctx.data().songbird.get(guild_id) {
         let mut handler = handler_lock.lock().await;
