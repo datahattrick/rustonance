@@ -1,6 +1,7 @@
 use poise::serenity_prelude as serenity;
 use ::serenity::async_trait;
 use songbird::events::{Event, EventContext, EventHandler as VoiceEventHandler};
+use tracing::{info, error};
 use crate::utils::{UserData, Error};
 
 pub async fn event_handler(
@@ -11,7 +12,7 @@ pub async fn event_handler(
 ) -> Result<(), Error> {
     match *event {
         serenity::FullEvent::Ready { ref data_about_bot, .. } => {
-            println!("Logged in as {}", data_about_bot.user.name);
+            info!("Logged in as {}", data_about_bot.user.name);
         }
         _ => {}
     }
@@ -25,7 +26,7 @@ impl VoiceEventHandler for TrackErrorNotifier {
     async fn act(&self, ctx: &EventContext<'_>) -> Option<Event> {
         if let EventContext::Track(track_list) = ctx {
             for (state, handle) in *track_list {
-                println!(
+                error!(
                     "Track {:?} encountered an error: {:?}",
                     handle.uuid(),
                     state.playing

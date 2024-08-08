@@ -1,8 +1,7 @@
 
 use std::error::Error;
 use rustonance::client::Client;
-use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, FmtSubscriber};
-pub mod error;
+use tracing::error;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -21,9 +20,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .with_target(false)
         .finish(); 
 
-    tracing::subscriber::set_global_default(subscriber);
+    let _ = tracing::subscriber::set_global_default(subscriber);
 
-    let mut rustonance = Client::default().await?;
+    let mut rustonance = Client::default().await
+        .map_err(|err| error!("Failed to implement Client: {}", err)).unwrap();
 
     tokio::spawn(async move {
         let _ = rustonance.start().await.map_err(|why| println!("Client ended: {:?}", why));

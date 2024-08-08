@@ -1,12 +1,15 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use reqwest::Client;
+use songbird::{id::GuildId, tracks::TrackQueue, Driver};
 
 
 // Custom user data passed to all command functions
 pub struct UserData {
     pub http_client: Client,
     pub songbird: Arc<songbird::Songbird>,
+    pub driver: Driver,
+    pub queues: HashMap<GuildId, TrackQueue>,
 }
 
 impl UserData {

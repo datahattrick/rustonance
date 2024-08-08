@@ -4,3 +4,4 @@ pub mod commands;
 pub mod utils;
 pub mod sources;
 pub mod messaging;
+pub mod model;

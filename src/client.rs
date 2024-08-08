@@ -2,6 +2,7 @@ use std::env;
 use std::sync::Arc;
 
 use poise::serenity_prelude as serenity;
+use songbird::Driver;
 
 use crate::handlers::serenity::event_handler;
 use crate::commands::{
@@ -84,6 +85,8 @@ impl Client {
                     Ok( UserData { 
                         http_client: HttpClient::new(),
                         songbird: manager_clone,
+                        driver: Driver::default(),
+                        queues: Default::default(),
                      })
                 })
             })

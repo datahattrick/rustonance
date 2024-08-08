@@ -1,11 +1,14 @@
-use std::error::Error;
-
-use crate::{handlers::serenity::TrackErrorNotifier, messaging::message::check_msg, utils::Context};
+use crate::{handlers::serenity::TrackErrorNotifier, messaging::message::check_msg, utils::{Context, Error}};
 use songbird::TrackEvent;
+use tracing::info;
 
 
 #[poise::command(prefix_command, guild_only)]
-pub async fn join(ctx: Context<'_>) -> Result<(), Box<dyn Error + Send + Sync + 'static>>{
+pub async fn join(ctx: Context<'_>) -> Result<(), Error>{
+    join_channel(ctx).await
+}
+
+pub async fn join_channel(ctx: Context<'_>) ->  Result<(),Error> {
     let (guild_id, channel_id) = {
         let guild = ctx.guild().unwrap();
         let channel_id = guild
@@ -30,6 +33,7 @@ pub async fn join(ctx: Context<'_>) -> Result<(), Box<dyn Error + Send + Sync + 
     // Just move like it will now or prevent in case someone else is using it?
     // While playing?
 
+    info!("Joining voice channel");
     if let Ok(handler_lock) = manager.join(guild_id, connect_to).await {
         // Attach an event handler to see notifications of all track errors.
         let mut handler = handler_lock.lock().await;
@@ -43,5 +47,4 @@ pub async fn join(ctx: Context<'_>) -> Result<(), Box<dyn Error + Send + Sync + 
 
     }
     Ok(())
-
 }
