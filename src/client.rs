@@ -57,7 +57,7 @@ impl Client {
             commands: vec![help(), play(), join(), next(), skip(), pause(), stop(), leave(), resume()],
             // What prefix to look for
             prefix_options: poise::PrefixFrameworkOptions { 
-                prefix: Some("/".into()), 
+                prefix: Some("/".into()),
                 ..Default::default()
             },
 

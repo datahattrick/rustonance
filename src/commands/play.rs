@@ -31,6 +31,7 @@ pub async fn play(ctx: Context<'_>, url: Vec<String>) ->  Result<(), Error> {
         let _track_info = YouTube::info(track.clone()).await;
 
         handler.enqueue_input(track.into()).await;
+
         if handler.queue().len() == 1 {
             check_msg(
                 ctx.say("Playing".to_string())
