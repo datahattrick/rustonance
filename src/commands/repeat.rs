@@ -25,10 +25,10 @@ pub async fn repeat(ctx: Context<'_>) ->  Result<(), Error> {
 
         match toggle(&track) {
             Ok(_) if was_looping => {
-                check_msg(ctx.say("Disabling loop").await)
+                check_msg(ctx.say("Disabling the loop!").await)
             }
             Ok(_) if !was_looping => {
-                check_msg(ctx.say("Enabling loop").await)
+                check_msg(ctx.say("Repeating, remember to use /repeat again to disable").await)
             }
             _ => check_msg(ctx.say("Sorry something went wrong").await)
         }
