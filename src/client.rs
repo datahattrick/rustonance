@@ -2,6 +2,7 @@ use std::env;
 use std::sync::Arc;
 
 use poise::serenity_prelude as serenity;
+use ::tracing::info;
 
 
 use crate::commands::resume::resume;
@@ -65,13 +66,13 @@ impl Client {
 
             pre_command: |ctx| {
                 Box::pin(async move {
-                    println!("Executing command {}...", ctx.command().qualified_name);
+                    info!("Executing command {}...", ctx.command().qualified_name);
                 })
             },
             // This code is run after a command if it was successful (returned Ok)
             post_command: |ctx| {
                 Box::pin(async move {
-                    println!("Executed command {}!", ctx.command().qualified_name);
+                    info!("Executed command {}!", ctx.command().qualified_name);
                 })
             },
             // Enforce command checks even for owners (enforced by default)
