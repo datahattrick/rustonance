@@ -4,6 +4,7 @@ use std::sync::Arc;
 use poise::serenity_prelude as serenity;
 
 
+use crate::commands::resume::resume;
 use crate::commands::skip::skip;
 use crate::handlers::serenity::event_handler;
 use crate::commands::{
@@ -52,7 +53,7 @@ impl Client {
 
         let options = poise::FrameworkOptions {
             // List of commands
-            commands: vec![help(), play(), join(), next(), skip(), pause(), stop(), leave()],
+            commands: vec![help(), play(), join(), next(), skip(), pause(), stop(), leave(), resume()],
             // What prefix to look for
             prefix_options: poise::PrefixFrameworkOptions { 
                 prefix: Some("/".into()), 

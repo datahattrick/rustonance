@@ -9,10 +9,11 @@
 - [x] command stop
 - [x] command pause
 - [x] command skip
-- [ ] command leave
-- [ ] command queue
+- [x] command leave
+- [ ] command list
 - [x] command play
 - [ ] command seek
+- [x] command resume
 - [ ] command now (nowPlaying)
 - [ ] command repeat
 - [ ] implement caching of queue
