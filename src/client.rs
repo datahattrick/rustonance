@@ -10,6 +10,8 @@ use crate::commands::{
     play::play,
     join::join,
     skip::next,
+    pause::pause,
+    stop::stop,
 };
 use crate::utils::{UserData, Error};
 
@@ -48,7 +50,7 @@ impl Client {
 
         let options = poise::FrameworkOptions {
             // List of commands
-            commands: vec![help(), play(), join(), next(), skip()],
+            commands: vec![help(), play(), join(), next(), skip(), pause(), stop()],
             // What prefix to look for
             prefix_options: poise::PrefixFrameworkOptions { 
                 prefix: Some("/".into()), 

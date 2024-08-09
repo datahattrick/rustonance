@@ -6,7 +6,8 @@
 - [ ] Implement Spotify playing
 - [x] Implement Youtube playing 
 - [x] Create queue logic
-- [ ] command stop
+- [x] command stop
+- [x] command pause
 - [x] command skip
 - [ ] command leave
 - [ ] command queue
@@ -16,3 +17,4 @@
 - [ ] command repeat
 - [ ] implement caching of queue
 - [ ] implement nice messaging 
+- [ ] Deal with play race condition
