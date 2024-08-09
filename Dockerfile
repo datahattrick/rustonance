@@ -21,7 +21,8 @@ RUN cargo build --release --locked
 # Necessary dependencies to run Rustonance
 FROM debian:bullseye-slim
 
-RUN apt-get update && apt-get install -y python3-pip ffmpeg
+RUN apt-get update && apt-get install -y python3-pip ffmpeg \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 RUN pip install -U yt-dlp
 
 COPY --from=build /rustonance/target/release/rustonance .
