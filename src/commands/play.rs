@@ -43,7 +43,6 @@ pub async fn play(ctx: Context<'_>, url: Vec<String>) ->  Result<(), Error> {
                 .await,
             );
         };
-        handler.remove_all_global_events();
     } else {
         check_msg(ctx.say("Not in a voice channel to play in").await);
     }
