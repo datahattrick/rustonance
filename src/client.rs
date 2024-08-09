@@ -5,6 +5,7 @@ use poise::serenity_prelude as serenity;
 use ::tracing::info;
 
 
+use crate::commands::repeat::repeat;
 use crate::commands::resume::resume;
 use crate::commands::skip::skip;
 use crate::handlers::serenity::event_handler;
@@ -54,7 +55,7 @@ impl Client {
 
         let options = poise::FrameworkOptions {
             // List of commands
-            commands: vec![help(), play(), join(), next(), skip(), pause(), stop(), leave(), resume()],
+            commands: vec![help(), play(), join(), next(), skip(), pause(), stop(), leave(), resume(), repeat()],
             // What prefix to look for
             prefix_options: poise::PrefixFrameworkOptions { 
                 prefix: Some("/".into()),

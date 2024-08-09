@@ -23,18 +23,18 @@ pub async fn play(ctx: Context<'_>, url: Vec<String>) ->  Result<(), Error> {
 
     let query = url.join(" ");
 
-    check_msg(ctx.say(format!("Grabbing {}", query)).await);
+    check_msg(ctx.say("Grabbing and adding it to the queue").await);
     if let Some(handler_lock) = ctx.data().songbird.get(guild_id) {
         let mut handler = handler_lock.lock().await;
     
         let track = YouTube::query(ctx, query).await.unwrap();
-        let _track_info = YouTube::info(track.clone()).await;
+        let track_info = YouTube::info(track.clone()).await;
 
         handler.enqueue_input(track.into()).await;
 
         if handler.queue().len() == 1 {
             check_msg(
-                ctx.say("Playing".to_string())
+                ctx.say(format!("Playing: {}", track_info.name))
                     .await,
             );
         } else {
