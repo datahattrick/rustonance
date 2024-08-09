@@ -15,7 +15,7 @@
 - [ ] command seek
 - [x] command resume
 - [ ] command now (nowPlaying)
-- [ ] command repeat
+- [x] command repeat
 - [ ] implement caching of queue
 - [ ] implement nice messaging 
 - [ ] Deal with play race condition
