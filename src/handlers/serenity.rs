@@ -10,11 +10,8 @@ pub async fn event_handler(
     _framework: poise::FrameworkContext<'_, UserData, Error>,
     _data: &UserData,
 ) -> Result<(), Error> {
-    match *event {
-        serenity::FullEvent::Ready { ref data_about_bot, .. } => {
-            info!("Logged in as {}", data_about_bot.user.name);
-        }
-        _ => {}
+    if let serenity::FullEvent::Ready { ref data_about_bot, .. } = *event {
+        info!("Logged in as {}", data_about_bot.user.name);
     }
     Ok(())
 }

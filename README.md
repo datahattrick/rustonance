@@ -5,9 +5,9 @@
 
 - [ ] Implement Spotify playing
 - [x] Implement Youtube playing 
-- [ ] Create queue logic
+- [x] Create queue logic
 - [ ] command stop
-- [ ] command skip
+- [x] command skip
 - [ ] command leave
 - [ ] command queue
 - [x] command play

@@ -2,13 +2,14 @@ use std::env;
 use std::sync::Arc;
 
 use poise::serenity_prelude as serenity;
-use songbird::Driver;
 
+use crate::commands::skip::skip;
 use crate::handlers::serenity::event_handler;
 use crate::commands::{
     help::help,
     play::play,
     join::join,
+    skip::next,
 };
 use crate::utils::{UserData, Error};
 
@@ -47,7 +48,7 @@ impl Client {
 
         let options = poise::FrameworkOptions {
             // List of commands
-            commands: vec![help(), play(), join()],
+            commands: vec![help(), play(), join(), next(), skip()],
             // What prefix to look for
             prefix_options: poise::PrefixFrameworkOptions { 
                 prefix: Some("/".into()), 
@@ -85,8 +86,6 @@ impl Client {
                     Ok( UserData { 
                         http_client: HttpClient::new(),
                         songbird: manager_clone,
-                        driver: Driver::default(),
-                        queues: Default::default(),
                      })
                 })
             })
