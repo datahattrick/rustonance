@@ -4,3 +4,4 @@ pub mod join;
 pub mod skip;
 pub mod pause;
 pub mod stop;
+pub mod leave;
