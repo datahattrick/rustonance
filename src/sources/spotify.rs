@@ -2,7 +2,7 @@ use std::str::FromStr;
 use std::env;
 use rspotify::{
     clients::BaseClient,
-    model::{SimplifiedArtist, TrackId},
+    model::TrackId,
     ClientCredsSpotify, Credentials, ClientError
 };
 use tokio::sync::Mutex;
@@ -164,17 +164,5 @@ impl Spotify {
 
     //     QueryType::Keywords(res)
     // }
-
-    fn build_query(artists: &str, track_name: &str) -> String {
-        format!("{} - {}", artists, track_name)
-    }
-
-    fn join_artists(artists: Vec<SimplifiedArtist>) -> String {
-        let artists_names: Vec<String> = artists.iter().map(
-            |artist| artist.name.clone()
-        )
-        .collect();
-        artists_names.join(" ")
-    }
 
 }
