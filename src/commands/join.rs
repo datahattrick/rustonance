@@ -1,4 +1,7 @@
-use crate::{handlers::serenity::TrackErrorNotifier, messaging::message::check_msg, utils::{Context, Error}};
+use ::std::time::Duration;
+
+use crate::{handlers::{idle::IdleHandler, serenity::TrackErrorNotifier}, messaging::message::check_msg, utils::{Context, Error}};
+use ::songbird::Event;
 use songbird::TrackEvent;
 use tracing::info;
 
@@ -41,10 +44,20 @@ pub async fn join_channel(ctx: Context<'_>) ->  Result<(),Error> {
     }
 
     if let Some(call) = manager.get(guild_id) {
+        info!("I am in channel adding idle event");
         let mut handler = call.lock().await;
 
         handler.remove_all_global_events();
-
+        
+        handler.add_global_event(
+            Event::Periodic(Duration::from_secs(1), None),
+            IdleHandler {
+                manager: manager.clone(),
+                guild_id: ctx.guild_id().unwrap(),
+                limit: 60 * 5,
+                count: Default::default(),
+            },
+        );
     }
     Ok(())
 }
