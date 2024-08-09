@@ -23,7 +23,7 @@ pub async fn play(ctx: Context<'_>, url: Vec<String>) ->  Result<(), Error> {
 
     let query = url.join(" ");
 
-    check_msg(ctx.say("Grabbing").await);
+    check_msg(ctx.say("Grabbing and adding it to the queue").await);
     if let Some(handler_lock) = ctx.data().songbird.get(guild_id) {
         let mut handler = handler_lock.lock().await;
     
