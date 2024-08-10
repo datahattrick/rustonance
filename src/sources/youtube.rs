@@ -17,13 +17,22 @@ impl YouTube {
     }
 
     pub async fn info(mut vid: YoutubeDl) -> TrackInfo {
-        let metadata = vid.aux_metadata().await
-            .map_err(|err| error!("Failed to get video metadata: {:?}", err)).unwrap();
-        TrackInfo {
-            name: metadata.title.unwrap(),
-            artists: vec![metadata.artist.unwrap()],
-            duration: metadata.duration.unwrap().as_secs(),
-            image_url: metadata.thumbnail.unwrap() 
+        match vid.aux_metadata().await {
+            Ok(metadata) => TrackInfo {
+                name: metadata.title.unwrap(),
+                artists: vec![metadata.artist.unwrap()],
+                duration: metadata.duration.unwrap().as_secs(),
+                image_url: metadata.thumbnail.unwrap() 
+            },
+            Err(_) => {
+                error!("Failed to get video metadata");
+                TrackInfo {
+                    name: "Track".to_string(),
+                    artists: vec!["Artist".to_string()],
+                    duration: 0,
+                    image_url: "https://imgur.com/hAV6F86".to_string()
+                }
+            }
         }
     }
 }
