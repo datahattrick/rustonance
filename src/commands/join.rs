@@ -3,15 +3,21 @@ use ::std::time::Duration;
 use crate::{handlers::{idle::IdleHandler, serenity::TrackErrorNotifier}, messaging::message::check_msg, utils::{Context, Error}};
 use ::songbird::Event;
 use songbird::TrackEvent;
-use tracing::info;
 
 
-#[poise::command(prefix_command, guild_only)]
-pub async fn join(ctx: Context<'_>) -> Result<(), Error>{
+#[poise::command( 
+    guild_only,
+    slash_command, 
+    category = "Utility")]
+/// The join command, brings the discord bot into the voice channel
+pub async fn join(ctx: Context<'_>,
+) -> Result<(), Error>{
     join_channel(ctx).await
 }
 
-pub async fn join_channel(ctx: Context<'_>) ->  Result<(),Error> {
+pub async fn join_channel(
+    ctx: Context<'_>
+) ->  Result<(),Error> {
     let (guild_id, channel_id) = {
         let guild = ctx.guild().unwrap();
         let channel_id = guild
@@ -36,7 +42,6 @@ pub async fn join_channel(ctx: Context<'_>) ->  Result<(),Error> {
     // Just move like it will now or prevent in case someone else is using it?
     // While playing?
 
-    info!("Joining voice channel");
     if let Ok(handler_lock) = manager.join(guild_id, connect_to).await {
         // Attach an event handler to see notifications of all track errors.
         let mut handler = handler_lock.lock().await;
@@ -44,7 +49,6 @@ pub async fn join_channel(ctx: Context<'_>) ->  Result<(),Error> {
     }
 
     if let Some(call) = manager.get(guild_id) {
-        info!("I am in channel adding idle event");
         let mut handler = call.lock().await;
 
         handler.remove_all_global_events();

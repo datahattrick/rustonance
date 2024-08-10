@@ -19,11 +19,11 @@ impl YouTube {
     pub async fn info(mut vid: YoutubeDl) -> TrackInfo {
         let metadata = vid.aux_metadata().await
             .map_err(|err| error!("Failed to get video metadata: {:?}", err)).unwrap();
-        
         TrackInfo {
             name: metadata.title.unwrap(),
             artists: vec![metadata.artist.unwrap()],
-            duration: metadata.duration.unwrap().as_secs().to_string(),
+            duration: metadata.duration.unwrap().as_secs(),
+            image_url: metadata.thumbnail.unwrap() 
         }
     }
 }

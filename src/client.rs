@@ -52,10 +52,19 @@ impl Client {
 
     pub async fn new(token: String) -> Result<Client, Error> {
         let intents = serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::MESSAGE_CONTENT;
-
         let options = poise::FrameworkOptions {
             // List of commands
-            commands: vec![help(), play(), join(), next(), skip(), pause(), stop(), leave(), resume(), repeat()],
+            commands: vec![
+                help(),
+                play(),
+                join(),
+                next(),
+                skip(),
+                pause(),
+                stop(),
+                leave(),
+                resume(),
+                repeat()],
             // What prefix to look for
             prefix_options: poise::PrefixFrameworkOptions { 
                 prefix: Some("/".into()),
@@ -88,8 +97,9 @@ impl Client {
         let manager_clone = Arc::clone(&manager);
 
         let framework = poise::Framework::builder()
-            .setup(move |_ctx, _ready, _framework| {
+            .setup(move |ctx, _ready, framework| {
                 Box::pin(async move {
+                    poise::builtins::register_globally(ctx, &framework.options().commands).await?;
                     Ok( UserData { 
                         http_client: HttpClient::new(),
                         songbird: manager_clone,

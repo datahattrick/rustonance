@@ -1,7 +1,11 @@
 use crate::{messaging::message::check_msg, utils::{Context, Error}};
 
 
-#[poise::command(prefix_command, guild_only)]
+#[poise::command(    
+    guild_only,
+    slash_command, 
+    category = "Utility")]
+/// Leaves the current voice channel
 pub async fn leave(ctx: Context<'_>) -> Result<(), Error>{
     let guild_id = ctx.guild_id().unwrap();
 

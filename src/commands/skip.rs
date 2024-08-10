@@ -4,12 +4,20 @@ use crate::{messaging::message::check_msg, utils::Error};
 use crate::utils::Context;
 
 
-#[poise::command(prefix_command, guild_only)]
+#[poise::command(
+    slash_command, 
+    guild_only, 
+    category = "Music")]
+/// Will go to the next song in the queue and skip the current one.
 pub async fn next(ctx: Context<'_>) -> Result<(), Error> {
     next_job(ctx).await
 }
 
-#[poise::command(prefix_command, guild_only)]
+#[poise::command(
+    slash_command, 
+    guild_only, 
+    category = "Music")]
+/// Will skip the current song to the next in the queue.
 pub async fn skip(ctx: Context<'_>) -> Result<(), Error> {
     next_job(ctx).await
 }

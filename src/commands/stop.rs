@@ -4,7 +4,8 @@ use crate::utils::{Error,Context};
 use crate::messaging::message::check_msg;
 
 
-#[poise::command(prefix_command, guild_only)]
+#[poise::command(slash_command, guild_only, category = "Utility")]
+/// Stops all music and clears the queue
 pub async fn stop(ctx: Context<'_>) ->  Result<(), Error> {
     let guild_id = ctx.guild_id().unwrap();
 

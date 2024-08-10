@@ -4,7 +4,11 @@ use crate::utils::{Error,Context};
 use crate::messaging::message::check_msg;
 
 
-#[poise::command(prefix_command, guild_only)]
+#[poise::command(
+    slash_command, 
+    guild_only, 
+    category = "Music")]
+/// Will resume the paused song
 pub async fn resume(ctx: Context<'_>) ->  Result<(), Error> {
     let guild_id = ctx.guild_id().unwrap();
 
