@@ -1,5 +1,4 @@
 
-use crate::handlers::serenity::NextInQueueNotifier;
 use crate::sources::youtube::YouTube;
 use crate::utils::{Error,Context};
 use ::tracing::info;
@@ -46,16 +45,16 @@ pub async fn play(ctx: Context<'_>,
 
         let embed = create_music_embed(track_info.name.clone(), track_info.artists.join(" "), track_info.duration, queue.len(), track_info.image_url.clone());
         let message = create_music_message(embed).await;
-        let context = ctx.serenity_context().clone();
-        handler.add_global_event(::songbird::Event::Track(::songbird::TrackEvent::Play), NextInQueueNotifier {
-            title: track_info.name.clone(),
-            artists: track_info.artists,
-            image_url: track_info.image_url,
-            duration: track_info.duration,
-            queue: queue.len(),
-            channel_id: ctx.channel_id(),
-            ctx: context,
-        });
+        // let context = ctx.serenity_context().clone();
+        // handler.add_global_event(::songbird::Event::Track(::songbird::TrackEvent::Play), NextInQueueNotifier {
+        //     title: track_info.name.clone(),
+        //     artists: track_info.artists,
+        //     image_url: track_info.image_url,
+        //     duration: track_info.duration,
+        //     queue: queue.len(),
+        //     channel_id: ctx.channel_id(),
+        //     ctx: context,
+        // });
 
         if handler.queue().len() == 1 {
             send_music_message(ctx.serenity_context(), ctx.channel_id(), message).await;
