@@ -58,7 +58,10 @@ pub async fn join_channel(
             IdleHandler {
                 manager: manager.clone(),
                 guild_id: ctx.guild_id().unwrap(),
-                limit: 60 * 5,
+                limit: std::env::var("IDLE_TIMEOUT")
+                    .ok() // Convert Result to Option
+                    .and_then(|v| v.parse().ok()) // Attempt to parse the value
+                    .unwrap_or(60 * 5),
                 count: Default::default(),
             },
         );
