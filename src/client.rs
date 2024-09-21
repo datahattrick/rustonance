@@ -1,10 +1,13 @@
+use std::collections::HashMap;
 use std::env;
 use std::sync::Arc;
 
 use poise::serenity_prelude as serenity;
+use tokio::sync::Mutex;
 use ::tracing::info;
 
 
+use crate::commands::help::channel;
 use crate::commands::repeat::repeat;
 use crate::commands::resume::resume;
 use crate::commands::skip::skip;
@@ -64,7 +67,8 @@ impl Client {
                 stop(),
                 leave(),
                 resume(),
-                repeat()],
+                repeat(),
+                channel()],
             // What prefix to look for
             prefix_options: poise::PrefixFrameworkOptions { 
                 prefix: Some("/".into()),
@@ -103,6 +107,7 @@ impl Client {
                     Ok( UserData { 
                         http_client: HttpClient::new(),
                         songbird: manager_clone,
+                        channel: Mutex::new(HashMap::new()), //Keep track of what channel the bot is in
                      })
                 })
             })

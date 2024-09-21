@@ -46,7 +46,7 @@ pub async fn join_channel(
         // Attach an event handler to see notifications of all track errors.
         let mut handler = handler_lock.lock().await;
         handler.add_global_event(TrackEvent::Error.into(), TrackErrorNotifier);
-    }
+    }   
 
     if let Some(call) = manager.get(guild_id) {
         let mut handler = call.lock().await;

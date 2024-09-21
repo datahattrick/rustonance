@@ -1,10 +1,10 @@
 use ::serenity::all::GuildId;
 use serenity::async_trait;
-use songbird::{tracks::PlayMode, Event, EventContext, EventHandler, Songbird};
+use songbird::{Event, tracks::PlayMode, EventContext, EventHandler, Songbird};
 use ::tracing::info;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
-    Arc,
+    Arc
 };
 
 pub struct IdleHandler {
@@ -20,7 +20,6 @@ impl EventHandler for IdleHandler {
         let EventContext::Track(track_list) = ctx else {
             return None;
         };
-
         // looks like the track list isn't ordered here, so the first track in the list isn't
         // guaranteed to be the first track in the actual queue, so search the entire list
         let bot_is_playing = track_list
@@ -42,4 +41,5 @@ impl EventHandler for IdleHandler {
 
         None
     }
+
 }
