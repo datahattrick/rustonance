@@ -1,4 +1,4 @@
-use crate::{model::TrackInfo, utils::Context};
+use crate::{model::TrackInfo, model::Context};
 use songbird::input::{Compose, YoutubeDl};
 use tracing::error;
 

@@ -1,5 +1,5 @@
 
-use crate::utils::{Error,Context};
+use crate::model::{Error,Context};
 
 use crate::messaging::message::check_msg;
 

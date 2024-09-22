@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use std::env;
+use std::num::NonZeroU64;
 use std::sync::Arc;
 
 use poise::serenity_prelude as serenity;
@@ -7,7 +7,6 @@ use tokio::sync::Mutex;
 use ::tracing::info;
 
 
-use crate::commands::help::channel;
 use crate::commands::repeat::repeat;
 use crate::commands::resume::resume;
 use crate::commands::skip::skip;
@@ -21,7 +20,7 @@ use crate::commands::{
     stop::stop,
     leave::leave,
 };
-use crate::utils::{UserData, Error};
+use crate::model::{ChannelData, ChannelID, Error, UserData, UserID};
 
 // YtDl requests need an HTTP client to operate -- we'll create and store our own.
 use reqwest::Client as HttpClient;
@@ -67,8 +66,7 @@ impl Client {
                 stop(),
                 leave(),
                 resume(),
-                repeat(),
-                channel()],
+                repeat()],
             // What prefix to look for
             prefix_options: poise::PrefixFrameworkOptions { 
                 prefix: Some("/".into()),
@@ -107,7 +105,11 @@ impl Client {
                     Ok( UserData { 
                         http_client: HttpClient::new(),
                         songbird: manager_clone,
-                        channel: Mutex::new(HashMap::new()), //Keep track of what channel the bot is in
+                        channel:  ChannelData {
+                            bot_id: Mutex::new(UserID(NonZeroU64::new(1).unwrap())),
+                            channel_id: Mutex::new(ChannelID(NonZeroU64::new(1).unwrap())),
+                            count: Mutex::new(0)
+                        }
                      })
                 })
             })

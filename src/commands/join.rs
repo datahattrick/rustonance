@@ -1,6 +1,6 @@
 use ::std::time::Duration;
 
-use crate::{handlers::{idle::IdleHandler, serenity::TrackErrorNotifier}, messaging::message::check_msg, utils::{Context, Error}};
+use crate::{handlers::{idle::IdleHandler, serenity::TrackErrorNotifier}, messaging::message::check_msg, model::{Context, Error}};
 use ::songbird::Event;
 use songbird::TrackEvent;
 

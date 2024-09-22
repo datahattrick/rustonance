@@ -1,6 +1,6 @@
 
 use crate::sources::youtube::YouTube;
-use crate::utils::{Error,Context};
+use crate::model::{Error,Context};
 use ::tracing::info;
 
 use crate::messaging::message::{check_msg, create_music_embed, create_music_message, send_music_message};

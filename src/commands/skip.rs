@@ -1,7 +1,7 @@
 
-use crate::{messaging::message::check_msg, utils::Error};
+use crate::{messaging::message::check_msg, model::Error};
 
-use crate::utils::Context;
+use crate::model::Context;
 
 
 #[poise::command(

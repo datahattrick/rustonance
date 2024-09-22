@@ -1,4 +1,4 @@
-use crate::{messaging::message::check_msg, utils::{Context, Error}};
+use crate::{messaging::message::check_msg, model::{Context, Error}};
 
 
 #[poise::command(    

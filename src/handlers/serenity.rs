@@ -1,10 +1,11 @@
 
+
 use poise::serenity_prelude as serenity;
 use ::serenity::{all::ChannelId, async_trait};
 use songbird::events::{Event, EventContext, EventHandler as VoiceEventHandler};
 use tracing::error;
 use ::tracing::info;
-use crate::{messaging::message::{create_music_embed, create_music_message, send_music_message}, utils::{Error, UserData as Data}};
+use crate::{messaging::message::{create_music_embed, create_music_message, send_music_message}, model::{Error, UserData as Data}};
 
 
 pub async fn event_handler(
@@ -15,49 +16,61 @@ pub async fn event_handler(
 ) -> Result<(), Error> {
     if let serenity::FullEvent::Ready { data_about_bot, .. } = event {
         info!("Logged in as {}", data_about_bot.user.name);
+        let mut update_bot_id= data.channel.bot_id.lock().await;
+        *update_bot_id = data_about_bot.user.id.into();
         // figure out how to hold data about bot
     }
 
-    // if let serenity::FullEvent::VoiceStateUpdate { new , ..} = event {
-        // let guild_id = new.guild_id.unwrap();
-        // let handler_lock = data.songbird().get(guild_id).unwrap();
-        // let handler = handler_lock.lock().await;
-        // let channel_id = handler.current_channel().unwrap();
-        // let bot = {
-        //     let mut update_data = data.channel.lock().await;
-        //     let bot = update_data.entry("test".to_string()).or_insert_with(|| channel_id.clone());            
-        //     bot
-        // };
     if let serenity::FullEvent::VoiceStateUpdate { new, .. } = event {
-        if let Some(guild_id) = new.guild_id {
-            // Check if we get a songbird handler for the guild
-            if let Some(handler_lock) = data.songbird().get(guild_id) {
-                let handler = handler_lock.lock().await;
-                // Safely check if the bot is in a voice channel
-                if let Some(channel_id) = handler.current_channel() {
-                    // Acquire lock on the channel data and insert if necessary
-                    info!("updating channel id, {}", channel_id.to_string()); 
-                    {
-                        let mut update_data = data.channel.lock().await;
-                        let bot = _ctx.http.get_current_user().await.unwrap();
-                        info!("for user {}", bot.to_string());
-                        // Avoid borrowing `update_data` inside the closure
-                        update_data.insert(bot.to_string(), channel_id);
+        let bot_id = _ctx.http.get_current_user().await.unwrap().id;
+        // If it is the bot that joined a channel, update what channel the bot is in
+        if let Some(user) = new.member.as_ref() {
+            if bot_id == user.user.id {
+                if let Some(guild_id) = new.guild_id {
+                    // Check if we get a songbird handler for the guild
+                    if let Some(handler_lock) = data.songbird().get(guild_id) {
+                        let handler = handler_lock.lock().await;
+                        // Safely check if the bot is in a voice channel
+                        if let Some(channel_id) = handler.current_channel() {
+                            // Acquire lock on the channel data and insert if necessary
+                            info!("updating channel id, {}", channel_id.to_string()); 
+                            {
+                                info!("for user {}", bot_id.to_string());
+                                let mut update_channel_id = data.channel.channel_id.lock().await; 
+                                *update_channel_id = channel_id.into();
+                            }
+                        } else {
+                            info!("Bot is not currently in a voice channel.");
+                      }
+                    } else {
+                        info!("No Songbird handler found for the guild.");
                     }
                 } else {
-                    info!("Bot is not currently in a voice channel.");
-                }
+                    info!("Guild ID is missing from VoiceStateUpdate.");
+                }  
             } else {
-                info!("No Songbird handler found for the guild.");
+            // Check if the user who is not the bot joined the same channel as the bot
+                let ch = data.channel.channel_id.lock().await;
+
+                if let Some(channel_id) = new.channel_id {
+                    if channel_id.get() == ch.0.get() {
+                        // If use joins channel then add the amount of users by 1
+                        let mut count = data.channel.count.lock().await;
+                        *count += 1
+                    } 
+                } else {
+                    info!("Failed to get channel id from event")
+                }
+
             }
         } else {
-            info!("Guild ID is missing from VoiceStateUpdate.");
+            info!("Member data is missing from the user")
         }
-    }
+
+    };
 
     Ok(())
 }
-
 pub struct TrackErrorNotifier;
 
 #[async_trait]
