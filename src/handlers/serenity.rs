@@ -14,63 +14,78 @@ pub async fn event_handler(
     _framework: poise::FrameworkContext<'_, Data, Error>,
     data: &Data,
 ) -> Result<(), Error> {
+    // Handle the Ready event when the bot logs in
     if let serenity::FullEvent::Ready { data_about_bot, .. } = event {
         info!("Logged in as {}", data_about_bot.user.name);
-        let mut update_bot_id= data.channel.bot_id.lock().await;
+
+        // Update the bot ID in shared state
+        let mut update_bot_id = data.channel.bot_id.lock().await;
         *update_bot_id = data_about_bot.user.id.into();
-        // figure out how to hold data about bot
     }
 
+    // Handle the VoiceStateUpdate event when someone joins or leaves a voice channel
     if let serenity::FullEvent::VoiceStateUpdate { new, .. } = event {
         let bot_id = _ctx.http.get_current_user().await.unwrap().id;
-        // If it is the bot that joined a channel, update what channel the bot is in
-        if let Some(user) = new.member.as_ref() {
+
+        // Check if the bot joined a channel
+        if let Some(user) = &new.member {
             if bot_id == user.user.id {
                 if let Some(guild_id) = new.guild_id {
-                    // Check if we get a songbird handler for the guild
+                    // Check for a Songbird handler (for voice channel interactions)
                     if let Some(handler_lock) = data.songbird().get(guild_id) {
                         let handler = handler_lock.lock().await;
-                        // Safely check if the bot is in a voice channel
+
+                        // Check if the bot is in a voice channel
                         if let Some(channel_id) = handler.current_channel() {
-                            // Acquire lock on the channel data and insert if necessary
-                            info!("updating channel id, {}", channel_id.to_string()); 
-                            {
-                                info!("for user {}", bot_id.to_string());
-                                let mut update_channel_id = data.channel.channel_id.lock().await; 
-                                *update_channel_id = channel_id.into();
+                            info!("Updating channel ID: {}", channel_id);
+
+                            // Update the channel ID in shared state
+                            let mut update_channel_id = data.channel.channel_id.lock().await;
+                            *update_channel_id = channel_id.into();
+
+                            // Fetch the number of users in the channel
+                            let poise_channel_id = poise::serenity_prelude::ChannelId::new(channel_id.0.get());
+                                    // Get the number of users in the voice channel
+                            if let Some(voice_states) = _ctx.cache.guild(guild_id).map(|guild| guild.voice_states.clone()) {
+                                let member_count = voice_states
+                                    .values()
+                                    .filter(|vs| vs.channel_id == Some(poise_channel_id))
+                                    .count();
+
+                                let mut set_count = data.channel.count.lock().await;
+                                info!("There is {} members in this channel", member_count.clone());
+                                *set_count = member_count;
                             }
                         } else {
-                            info!("Bot is not currently in a voice channel.");
-                      }
+                            info!("Bot is not in a voice channel.");
+                        }
                     } else {
                         info!("No Songbird handler found for the guild.");
                     }
                 } else {
                     info!("Guild ID is missing from VoiceStateUpdate.");
-                }  
-            } else {
-            // Check if the user who is not the bot joined the same channel as the bot
-                let ch = data.channel.channel_id.lock().await;
-
-                if let Some(channel_id) = new.channel_id {
-                    if channel_id.get() == ch.0.get() {
-                        // If use joins channel then add the amount of users by 1
-                        let mut count = data.channel.count.lock().await;
-                        *count += 1
-                    } 
-                } else {
-                    info!("Failed to get channel id from event")
                 }
-
+            } else {
+                // Handle when another user joins the same channel as the bot
+                let current_channel_id = data.channel.channel_id.lock().await;
+                if let Some(channel_id) = new.channel_id {
+                    if channel_id.get() == current_channel_id.0 {
+                        // Increment the member count
+                        let mut count = data.channel.count.lock().await;
+                        *count += 1;
+                    }
+                } else {
+                    info!("Failed to get channel ID from event.");
+                }
             }
         } else {
-            info!("Member data is missing from the user")
+            info!("Member data is missing from the user.");
         }
-
-    };
+    }
 
     Ok(())
 }
+
 pub struct TrackErrorNotifier;
 
 #[async_trait]
