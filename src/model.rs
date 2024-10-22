@@ -1,8 +1,8 @@
 use std::sync::Arc;
 use reqwest::Client;
 use tokio::sync::Mutex;
-use serde::Serialize;
-use serde::ser::{Serialize, Serializer, SerializeStruct};
+use serde::{Deserialize, Serialize};
+use serde::ser::{Serializer, SerializeStruct};
 
 pub struct TrackInfo {
     pub name: String,
@@ -16,7 +16,7 @@ pub enum Tracks {
    Track,
 }
 
-#[derive(Debug, Serialize, Clone, Copy)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
 pub struct ChannelID( pub u64);
 
 impl From<songbird::id::ChannelId> for ChannelID {
@@ -37,7 +37,7 @@ impl PartialEq<poise::serenity_prelude::ChannelId> for ChannelID {
     }
 }
 
-#[derive(Debug, Serialize, Clone, Copy)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
 pub struct UserID(pub u64);
 
 impl From<serenity::all::UserId> for UserID {
@@ -52,41 +52,28 @@ impl From<songbird::id::UserId> for UserID {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ChannelDataSerializable {
+    pub bot_id: UserID,
+    pub channel_id: ChannelID,
+    pub count: usize
+}
+
 pub struct ChannelData {
     pub bot_id: Mutex<UserID>,
     pub channel_id: Mutex<ChannelID>,
     pub count: Mutex<usize>,
 }
 
-// A temporary struct that can be serialized
-#[derive(Serialize)]
-struct ChannelDataSync {
-    bot_id: UserID,
-    channel_id: ChannelID,
-    count: usize,
-}
-
 impl ChannelData {
-    // Async method to gather data and serialize
-    pub async fn serialize_async<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let bot_id = self.bot_id.lock().await;
-        let channel_id = self.channel_id.lock().await;
-        let count = self.count.lock().await;
-
-        let sync_data = ChannelDataSync {
-            bot_id: *bot_id,
-            channel_id: *channel_id,
-            count: *count,
-        };
-
-        sync_data.serialize(serializer) // Serialize the temporary struct
+    pub async fn to_serializable(&self) -> ChannelDataSerializable {
+        ChannelDataSerializable {
+            bot_id: *self.bot_id.lock().await,
+            channel_id: *self.channel_id.lock().await,
+            count: *self.count.lock().await,
+        }
     }
 }
-
 
 // Custom user data passed to all command functions
 pub struct UserData {
@@ -101,12 +88,10 @@ impl UserData {
     where
         S: Serializer,
     {
-        // Create the serializer state with 1 serializable field ("channel")
+        let channel_data_serializable = self.channel.to_serializable().await;
+
         let mut state = serializer.serialize_struct("UserData", 1)?;
-
-        // Manually serialize the `channel` field using its async serialization
-        state.serialize_field("channel", &self.channel.serialize_async(serializer).await)?;
-
+        state.serialize_field("channel", &channel_data_serializable)?;
         state.end()
     }
 }
