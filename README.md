@@ -1,5 +1,7 @@
 # Rustonance
 
+Rustonance is a simple [Discord](https://discord.com/) music bot written in [Rust](https://www.rust-lang.org/).
+
 ## Usage
 
 The required parameter `DISCORD_TOKEN` must be set for the bot to work. Provide your discord application token and invite the bot to your server.
