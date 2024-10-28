@@ -1,0 +1,6 @@
+services:
+  rustonance:
+    image: ghcr.io/datahattrick/rustonance:latest
+    restart: always
+    environment:
+      - DISCORD_TOKEN=YOUR_DISCORD_TOKEN_HERE
