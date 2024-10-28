@@ -1,7 +1,9 @@
 use std::env;
+use std::num::NonZero;
 use std::sync::Arc;
 
 use poise::serenity_prelude as serenity;
+use songbird::id::GuildId;
 use ::tracing::info;
 
 
@@ -17,7 +19,8 @@ use crate::commands::{
     pause::pause,
     stop::stop,
     leave::leave,
-    debug::debug
+    debug::debug,
+    ew::ew,
 };
 use crate::model::{AsyncChannelData, ChannelID, Error, UserData, UserID};
 
@@ -66,7 +69,8 @@ impl Client {
                 leave(),
                 resume(),
                 repeat(),
-                debug()],
+                debug(),
+                ew()],
             // What prefix to look for
             prefix_options: poise::PrefixFrameworkOptions { 
                 prefix: Some("/".into()),
@@ -106,6 +110,7 @@ impl Client {
                         http_client: HttpClient::new(),
                         songbird: manager_clone,
                         channel:  AsyncChannelData::new(UserID(1), ChannelID(1)),
+                        guild_id: GuildId(NonZero::new(1).unwrap())
                      })
                 })
             })

@@ -6,7 +6,7 @@ use ::serenity::{all::ChannelId, async_trait};
 use songbird::events::{Event, EventContext, EventHandler as VoiceEventHandler};
 use tracing::error;
 use ::tracing::info;
-use crate::{messaging::message::{create_music_embed, create_music_message, send_music_message}, model::{Error, UserData as Data}};
+use crate::{messaging::message::{create_music_embed, create_music_message, send_music_message}, model::{ChannelID, Error, UserData as Data}};
 
 
 pub async fn event_handler(
@@ -78,6 +78,10 @@ pub async fn event_handler(
                 let mut channel_data = data.channel.channel_data.lock().await;
                 let bot_channel = channel_data.channel_id;
 
+                let previous_channel: ChannelID = match old {
+                    Some(voice_state) => voice_state.channel_id.map(|channel_id| channel_id.into()).unwrap_or(bot_channel),
+                    None => bot_channel,
+                };
 
                 if let Some(channel_id) = new.channel_id {
                     if channel_id.get() == bot_channel.get() {
@@ -86,35 +90,34 @@ pub async fn event_handler(
                         *count += 1;
                         info!("User joined. Updated count: {}", *count);
                     }
-                else if let Some(channel_id) = old.clone().unwrap().channel_id {
-                    if channel_id.get() == bot_channel.get() {
-                        // User left the channel
-                        let count = channel_data.user_count.entry(bot_channel).or_insert(0);
 
-                        if *count > 0 {
-                            *count -= 1;
-                            info!("Updated count after someone left: {}", *count);
+                else if previous_channel.get() == bot_channel.get() {
+                    // User left the channel
+                    let count = channel_data.user_count.entry(bot_channel).or_insert(0);
 
-                            // If only the bot is left in the channel, make it leave
-                            if *count == 1 {
-                                drop(channel_data); // Release the lock before making an async call
-                                if let Some(handler_lock) = data.songbird().get(new.guild_id.unwrap()) {
-                                    let mut handler = handler_lock.lock().await;
-                                    handler.remove_all_global_events();
-                                    info!("Everyon left");
-                                    if handler.leave().await.is_ok() {
-                                        info!("Bot is leaving because it's the only user left in the channel");
-                                    }
-                                } else {
-                                    info!("Why didn't this work")
+                    if *count > 0 {
+                        *count -= 1;
+                        info!("Updated count after someone left: {}", *count);
+
+                        // If only the bot is left in the channel, make it leave
+                        if *count <= 1 {
+                            drop(channel_data); // Release the lock before making an async call
+                            if let Some(handler_lock) = data.songbird().get(new.guild_id.unwrap()) {
+                                let mut handler = handler_lock.lock().await;
+                                handler.remove_all_global_events();
+                                info!("Everyon left");
+                                if handler.leave().await.is_ok() {
+                                    handler.queue().stop();
+                                    info!("Bot is leaving because it's the only user left in the channel");
                                 }
+                            } else {
+                                info!("Why didn't this work")
                             }
-                        } else {
-                            info!("Count is already zero; cannot decrement.");
                         }
+                    } else {
+                        info!("Count is already zero; cannot decrement.");
                     }
-
-                    }
+                }
                 } else {
                     info!("Failed to get channel ID from event.");
                 }

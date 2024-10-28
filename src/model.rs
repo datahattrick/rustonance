@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use reqwest::Client;
+use songbird::id::GuildId;
 use tokio::sync::Mutex;
 use serde::{Deserialize, Serialize};
 
@@ -104,7 +105,8 @@ impl AsyncChannelData {
 pub struct UserData {
     pub http_client: Client,
     pub songbird: Arc<songbird::Songbird>,
-    pub channel: AsyncChannelData
+    pub channel: AsyncChannelData,
+    pub guild_id: GuildId
 }
 
 impl UserData {

@@ -1,23 +1,23 @@
-use ::std::time::Duration;
+use std::time::Duration;
 
-use crate::{handlers::{idle::IdleHandler, serenity::TrackErrorNotifier}, messaging::message::check_msg, model::{Context, Error}};
-use ::songbird::Event;
-use songbird::TrackEvent;
+use crate::{
+    handlers::{idle::IdleHandler, serenity::TrackErrorNotifier},
+    messaging::message::check_msg,
+    model::{Context, Error},
+};
+use songbird::{Event, TrackEvent};
 
-
-#[poise::command( 
+#[poise::command(
     guild_only,
-    slash_command, 
-    category = "Utility")]
+    slash_command,
+    category = "Utility"
+)]
 /// The join command, brings the discord bot into the voice channel
-pub async fn join(ctx: Context<'_>,
-) -> Result<(), Error>{
+pub async fn join(ctx: Context<'_>) -> Result<(), Error> {
     join_channel(ctx).await
 }
 
-pub async fn join_channel(
-    ctx: Context<'_>
-) ->  Result<(),Error> {
+pub async fn join_channel(ctx: Context<'_>) -> Result<(), Error> {
     let (guild_id, channel_id) = {
         let guild = ctx.guild().unwrap();
         let channel_id = guild
@@ -37,36 +37,25 @@ pub async fn join_channel(
     };
 
     let manager = &ctx.data().songbird;
-    if let Some(call) = manager.get(guild_id) {
-        let handler = call.lock().await;
-
-        if let Some(current_channel) = handler.current_channel() {
-            if handler.queue().is_empty() {
-                manager.join(guild_id, connect_to).await?;
-                check_msg(ctx.say("On my way!").await);
-            } else if current_channel != connect_to.into() {
-                check_msg(ctx.reply("Bot is already in use, cannot join another channel.").await);
-                return Ok(());
-            }
-        } else {
-            manager.join(guild_id, connect_to).await?;   
-            check_msg(ctx.say("On my way!").await);     
-        }
-    } else {
+    
+    if manager.get(guild_id).is_some() {
         manager.join(guild_id, connect_to).await?;
+    } else {
+        // Step 2: If no handler is found, join the new channel
         check_msg(ctx.say("On my way!").await);
+        manager.join(guild_id, connect_to).await?;
     }
 
-    // Now get the call handler to attach event handlers
+    // Step 3: Get the call handler to attach event handlers
     if let Some(call) = manager.get(guild_id) {
         let mut handler = call.lock().await;
         handler.remove_all_global_events();
 
         // Add a TrackErrorNotifier to monitor track errors
         handler.add_global_event(TrackEvent::Error.into(), TrackErrorNotifier);
-        
-        const DEFAULT_IDLE_TIMEOUT: usize = 60 * 5;
 
+        // Set IdleHandler for auto-disconnect after being idle for a specified duration
+        const DEFAULT_IDLE_TIMEOUT: usize = 60 * 5;
         let idle_timeout = std::env::var("IDLE_TIMEOUT")
             .ok()
             .and_then(|v| v.parse().ok())
@@ -76,9 +65,9 @@ pub async fn join_channel(
             Event::Periodic(Duration::from_secs(1), None),
             IdleHandler {
                 manager: manager.clone(),
-                guild_id: ctx.guild_id().unwrap(),
+                guild_id,
                 limit: idle_timeout,
-                count: Default::default()
+                count: Default::default(),
             },
         );
     }
