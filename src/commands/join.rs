@@ -37,32 +37,48 @@ pub async fn join_channel(
     };
 
     let manager = &ctx.data().songbird;
+    if let Some(call) = manager.get(guild_id) {
+        let handler = call.lock().await;
 
-    // TODO: How do I want to deal with if bot already in another channel?
-    // Just move like it will now or prevent in case someone else is using it?
-    // While playing?
+        if let Some(current_channel) = handler.current_channel() {
+            if handler.queue().is_empty() {
+                manager.join(guild_id, connect_to).await?;
+                check_msg(ctx.say("On my way!").await);
+            } else if current_channel != connect_to.into() {
+                check_msg(ctx.reply("Bot is already in use, cannot join another channel.").await);
+                return Ok(());
+            }
+        } else {
+            manager.join(guild_id, connect_to).await?;   
+            check_msg(ctx.say("On my way!").await);     
+        }
+    } else {
+        manager.join(guild_id, connect_to).await?;
+        check_msg(ctx.say("On my way!").await);
+    }
 
-    if let Ok(handler_lock) = manager.join(guild_id, connect_to).await {
-        // Attach an event handler to see notifications of all track errors.
-        let mut handler = handler_lock.lock().await;
-        handler.add_global_event(TrackEvent::Error.into(), TrackErrorNotifier);
-    }   
-
+    // Now get the call handler to attach event handlers
     if let Some(call) = manager.get(guild_id) {
         let mut handler = call.lock().await;
-
         handler.remove_all_global_events();
+
+        // Add a TrackErrorNotifier to monitor track errors
+        handler.add_global_event(TrackEvent::Error.into(), TrackErrorNotifier);
         
+        const DEFAULT_IDLE_TIMEOUT: usize = 60 * 5;
+
+        let idle_timeout = std::env::var("IDLE_TIMEOUT")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(DEFAULT_IDLE_TIMEOUT);
+
         handler.add_global_event(
             Event::Periodic(Duration::from_secs(1), None),
             IdleHandler {
                 manager: manager.clone(),
                 guild_id: ctx.guild_id().unwrap(),
-                limit: std::env::var("IDLE_TIMEOUT")
-                    .ok() // Convert Result to Option
-                    .and_then(|v| v.parse().ok()) // Attempt to parse the value
-                    .unwrap_or(60 * 5),
-                count: Default::default(),
+                limit: idle_timeout,
+                count: Default::default()
             },
         );
     }

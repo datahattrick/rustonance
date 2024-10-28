@@ -1,6 +1,5 @@
 
 
-use tracing::info;
 
 use crate::model::{Context, Error};
 
@@ -16,12 +15,15 @@ pub async fn debug(
     #[rest]
     command: Option<String>,
 ) -> Result<(), Error> {
-    // This makes it possible to just make `help` a subcommand of any command
-    // `/fruit help` turns into `/help fruit`
-    // `/fruit help apple` turns into `/help fruit apple`
+
     if let Some(command) = command {
         if command == "state" {
-            ctx.say(ctx.data());
+            match ctx.data().to_json().await {
+                Ok(json_string) => { ctx.say(format!("Hi, here is who I is: {}", json_string)).await?; }
+                Err(e) => { ctx.say(format!("Sorry something went wrong: Error serializing UserData: {}", e)).await?; }
+            };
+        } else {
+            ctx.say("Command not found").await?;
         }
     }
 

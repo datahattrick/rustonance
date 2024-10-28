@@ -1,7 +1,6 @@
 
 use crate::sources::youtube::YouTube;
 use crate::model::{Error,Context};
-use ::tracing::info;
 
 use crate::messaging::message::{check_msg, create_music_embed, create_music_message, send_music_message};
 use crate::commands::join::join_channel;
@@ -28,7 +27,6 @@ pub async fn play(ctx: Context<'_>,
     message: Vec<String>
 ) ->  Result<(), Error> {
     let guild_id = ctx.guild_id().unwrap();
-    info!("Here");
     join_channel(ctx).await?;
     let query = message.join(" ");
 

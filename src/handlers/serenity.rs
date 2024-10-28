@@ -1,5 +1,6 @@
 
 
+
 use poise::serenity_prelude as serenity;
 use ::serenity::{all::ChannelId, async_trait};
 use songbird::events::{Event, EventContext, EventHandler as VoiceEventHandler};
@@ -19,12 +20,14 @@ pub async fn event_handler(
         info!("Logged in as {}", data_about_bot.user.name);
 
         // Update the bot ID in shared state
-        let mut update_bot_id = data.channel.bot_id.lock().await;
-        *update_bot_id = data_about_bot.user.id.into();
+        let mut update_user_data = data.channel.channel_data.lock().await;
+        update_user_data.bot_id = data_about_bot.user.id.into();
     }
 
+    
     // Handle the VoiceStateUpdate event when someone joins or leaves a voice channel
-    if let serenity::FullEvent::VoiceStateUpdate { new, .. } = event {
+    if let serenity::FullEvent::VoiceStateUpdate { old, new } = event {
+        info!("Updating voice state");
         let bot_id = _ctx.http.get_current_user().await.unwrap().id;
 
         // Check if the bot joined a channel
@@ -39,9 +42,11 @@ pub async fn event_handler(
                         if let Some(channel_id) = handler.current_channel() {
                             info!("Updating channel ID: {}", channel_id);
 
+                            {
                             // Update the channel ID in shared state
-                            let mut update_channel_id = data.channel.channel_id.lock().await;
-                            *update_channel_id = channel_id.into();
+                            let mut update_channel_id = data.channel.channel_data.lock().await;
+                            update_channel_id.channel_id = channel_id.into();
+                            }
 
                             // Fetch the number of users in the channel
                             let poise_channel_id = poise::serenity_prelude::ChannelId::new(channel_id.0.get());
@@ -52,9 +57,12 @@ pub async fn event_handler(
                                     .filter(|vs| vs.channel_id == Some(poise_channel_id))
                                     .count();
 
-                                let mut set_count = data.channel.count.lock().await;
-                                info!("There is {} members in this channel", member_count.clone());
-                                *set_count = member_count;
+                                {
+                                    let mut set_count = data.channel.channel_data.lock().await;
+                                    info!("There is {} members in this channel", member_count.clone());
+                                    set_count.user_count.insert(channel_id.into(), member_count);
+                                    //*entry = member_count;
+                                }
                             }
                         } else {
                             info!("Bot is not in a voice channel.");
@@ -67,12 +75,45 @@ pub async fn event_handler(
                 }
             } else {
                 // Handle when another user joins the same channel as the bot
-                let current_channel_id = data.channel.channel_id.lock().await;
+                let mut channel_data = data.channel.channel_data.lock().await;
+                let bot_channel = channel_data.channel_id;
+
+
                 if let Some(channel_id) = new.channel_id {
-                    if channel_id.get() == current_channel_id.0 {
+                    if channel_id.get() == bot_channel.get() {
                         // Increment the member count
-                        let mut count = data.channel.count.lock().await;
+                        let count = channel_data.user_count.entry(channel_id.into()).or_insert(0);
                         *count += 1;
+                        info!("User joined. Updated count: {}", *count);
+                    }
+                else if let Some(channel_id) = old.clone().unwrap().channel_id {
+                    if channel_id.get() == bot_channel.get() {
+                        // User left the channel
+                        let count = channel_data.user_count.entry(bot_channel).or_insert(0);
+
+                        if *count > 0 {
+                            *count -= 1;
+                            info!("Updated count after someone left: {}", *count);
+
+                            // If only the bot is left in the channel, make it leave
+                            if *count == 1 {
+                                drop(channel_data); // Release the lock before making an async call
+                                if let Some(handler_lock) = data.songbird().get(new.guild_id.unwrap()) {
+                                    let mut handler = handler_lock.lock().await;
+                                    handler.remove_all_global_events();
+                                    info!("Everyon left");
+                                    if handler.leave().await.is_ok() {
+                                        info!("Bot is leaving because it's the only user left in the channel");
+                                    }
+                                } else {
+                                    info!("Why didn't this work")
+                                }
+                            }
+                        } else {
+                            info!("Count is already zero; cannot decrement.");
+                        }
+                    }
+
                     }
                 } else {
                     info!("Failed to get channel ID from event.");
@@ -81,6 +122,7 @@ pub async fn event_handler(
         } else {
             info!("Member data is missing from the user.");
         }
+
     }
 
     Ok(())

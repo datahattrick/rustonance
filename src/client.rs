@@ -2,7 +2,6 @@ use std::env;
 use std::sync::Arc;
 
 use poise::serenity_prelude as serenity;
-use tokio::sync::Mutex;
 use ::tracing::info;
 
 
@@ -20,7 +19,7 @@ use crate::commands::{
     leave::leave,
     debug::debug
 };
-use crate::model::{ChannelData, ChannelID, Error, UserData, UserID};
+use crate::model::{AsyncChannelData, ChannelID, Error, UserData, UserID};
 
 // YtDl requests need an HTTP client to operate -- we'll create and store our own.
 use reqwest::Client as HttpClient;
@@ -106,11 +105,7 @@ impl Client {
                     Ok( UserData { 
                         http_client: HttpClient::new(),
                         songbird: manager_clone,
-                        channel:  ChannelData {
-                            bot_id: Mutex::new(UserID(1)),
-                            channel_id: Mutex::new(ChannelID(1)),
-                            count: Mutex::new(0)
-                        }
+                        channel:  AsyncChannelData::new(UserID(1), ChannelID(1)),
                      })
                 })
             })

@@ -7,6 +7,7 @@ use std::sync::{
     Arc
 };
 
+
 pub struct IdleHandler {
     pub manager: Arc<Songbird>,
     pub guild_id: GuildId,

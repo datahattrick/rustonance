@@ -1,22 +1,11 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 use reqwest::Client;
 use tokio::sync::Mutex;
 use serde::{Deserialize, Serialize};
-use serde::ser::{Serializer, SerializeStruct};
 
-pub struct TrackInfo {
-    pub name: String,
-    pub artists: Vec<String>,
-    pub duration: u64,
-    pub image_url: String
-}
 
-pub enum Tracks {
-   FullTrack,
-   Track,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ChannelID( pub u64);
 
 impl From<songbird::id::ChannelId> for ChannelID {
@@ -37,6 +26,12 @@ impl PartialEq<poise::serenity_prelude::ChannelId> for ChannelID {
     }
 }
 
+impl ChannelID {
+    pub fn get(self) -> u64 {
+        self.0
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, Copy)]
 pub struct UserID(pub u64);
 
@@ -52,59 +47,80 @@ impl From<songbird::id::UserId> for UserID {
     }
 }
 
+impl UserID {
+    pub fn get(self) -> u64 {
+        self.0
+    }
+}
+
+
 #[derive(Debug, Deserialize, Serialize)]
-pub struct ChannelDataSerializable {
+pub struct ChannelData {
     pub bot_id: UserID,
     pub channel_id: ChannelID,
-    pub count: usize
+    pub user_count: HashMap<ChannelID, usize>,
 }
 
-pub struct ChannelData {
-    pub bot_id: Mutex<UserID>,
-    pub channel_id: Mutex<ChannelID>,
-    pub count: Mutex<usize>,
+pub struct AsyncChannelData {
+    pub channel_data: Mutex<ChannelData>
 }
 
-impl ChannelData {
-    pub async fn to_serializable(&self) -> ChannelDataSerializable {
-        ChannelDataSerializable {
-            bot_id: *self.bot_id.lock().await,
-            channel_id: *self.channel_id.lock().await,
-            count: *self.count.lock().await,
+impl AsyncChannelData {
+    pub fn new(bot_id: UserID, channel_id: ChannelID) -> Self {
+        AsyncChannelData {
+            channel_data: Mutex::new(ChannelData {
+                bot_id,
+                channel_id,
+                user_count: HashMap::new(),
+            }),
         }
     }
+    pub async fn increment_user_count(&self, channel_id: ChannelID) {
+        let mut channel_data = self.channel_data.lock().await;
+        *channel_data.user_count.entry(channel_id).or_insert(0) += 1;
+    }
+
+    pub async fn decrement_user_count(&self, channel_id: ChannelID) {
+        let mut channel_data = self.channel_data.lock().await;
+        if let Some(count) = channel_data.user_count.get_mut(&channel_id) {
+            if *count > 0 {
+                *count -= 1;
+            }
+        }
+    }
+
+    pub async fn to_serializable(&self) -> ChannelData {
+        let inner = self.channel_data.lock().await;
+        ChannelData {
+            bot_id: inner.bot_id,
+            channel_id: inner.channel_id,
+            user_count: inner.user_count.clone(),
+        }
+    }
+
 }
 
 // Custom user data passed to all command functions
 pub struct UserData {
     pub http_client: Client,
     pub songbird: Arc<songbird::Songbird>,
-    pub channel: ChannelData
-}
-
-// Custom serialization for UserData
-impl UserData {
-    pub async fn serialize_async<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let channel_data_serializable = self.channel.to_serializable().await;
-
-        let mut state = serializer.serialize_struct("UserData", 1)?;
-        state.serialize_field("channel", &channel_data_serializable)?;
-        state.end()
-    }
+    pub channel: AsyncChannelData
 }
 
 impl UserData {
     pub fn http_client(&self) -> &Client {
         &self.http_client
     }
-    pub fn songbird(&self) -> Arc<songbird::Songbird> {
-        self.songbird.clone()
+    pub fn songbird(&self) -> &Arc<songbird::Songbird> {
+        &self.songbird
     }
-    pub fn channel(&self) -> &ChannelData{
+    pub fn channel(&self) -> &AsyncChannelData{
         &self.channel
+    }
+
+    pub async fn to_json(&self) -> Result<String, serde_json::Error> {
+        let serializable_channel = self.channel.to_serializable().await;
+        serde_json::to_string(&serializable_channel)
     }
 }
 
@@ -113,3 +129,15 @@ impl UserData {
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 #[allow(unused)]
 pub type Context<'a> = poise::Context<'a, UserData, Error>;
+
+pub struct TrackInfo {
+    pub name: String,
+    pub artists: Vec<String>,
+    pub duration: u64,
+    pub image_url: String
+}
+
+pub enum Tracks {
+   FullTrack,
+   Track,
+}
