@@ -2089,7 +2089,7 @@ dependencies = [
 
 [[package]]
 name = "rustonance"
-version = "0.1.0"
+version = "0.4.0"
 dependencies = [
  "dotenv",
  "lazy_static",
