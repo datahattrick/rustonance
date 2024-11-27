@@ -63,25 +63,26 @@ async fn handle_bot_voice_update(
             let handler = handler_lock.lock().await;
 
             if let Some(channel_id) = handler.current_channel() {
+                info!("Bot has joined a voice channel, updating state");
                 update_channel_id(data, channel_id).await;
                 update_member_count(ctx, guild_id, channel_id, data).await;
             } else {
-                info!("Bot is not in a voice channel, probably because it disconnected");
+                debug!("Bot is not in a voice channel, probably because it disconnected");
                 let mut channel_data = data.channel.channel_data.lock().await;
                 channel_data.channel_id.0 = 1;
             }
         } else {
-            info!("No Songbird handler found in the guild.");
+            debug!("No Songbird handler found in the guild.");
         }
     } else {
-        info!("Guild ID is missing from VoiceStateUpdate.");
+        debug!("Guild ID is missing from VoiceStateUpdate.");
     }
 
     Ok(())
 }
 
 async fn update_channel_id(data: &Data, channel_id: songbird::id::ChannelId) {
-    info!("Updating Channel ID: {}", channel_id );
+    debug!("Updating Channel ID: {}", channel_id );
     let mut update_channel_id = data.channel.channel_data.lock().await;
     update_channel_id.channel_id = channel_id.into();
 }
@@ -101,7 +102,7 @@ async fn update_member_count(
             .filter(|vs| vs.channel_id == Some(poise_channel_id))
             .count();
         let mut set_count = data.channel.channel_data.lock().await;
-        info!("There is {} members in this channel", member_count);
+        debug!("There is {} members in this channel", member_count);
         set_count.user_count.insert(channel_id.into(), member_count);
     }
 }
@@ -135,7 +136,7 @@ async fn handle_user_voice_update(
 fn increment_member_count(channel_data: &mut ChannelData, channel_id: ChannelId) {
     let count = channel_data.user_count.entry(channel_id.into()).or_insert(0);
     *count += 1;
-    info!("User joined. Updated count: {}", *count)
+    debug!("User joined. Updated count: {}", *count)
 }
 
 async fn decrement_member_count(
@@ -147,7 +148,7 @@ async fn decrement_member_count(
     let count = channel_data.user_count.entry(bot_channel).or_insert(0);
     if *count > 0 {
         *count -= 1;
-        info!("Updated count after someone left: {}", *count);
+        debug!("Updated count after someone left: {}", *count);
         if *count <= 1 {
             handle_bot_leave(guild_id, data, channel_data).await;
         }
@@ -159,10 +160,9 @@ async fn handle_bot_leave(
     data: &Data,
     channel_data: &mut ChannelData
 ) {
-    info!("Clearing hashmap");
     // Clear the user count hashmap
     channel_data.user_count.clear();
-    info!("User count hashmap cleared");
+    debug!("User count hashmap cleared");
                 
     if let Some(guild_id) = guild_id {
         if let Some(handler_lock) = data.songbird().get(guild_id) {
